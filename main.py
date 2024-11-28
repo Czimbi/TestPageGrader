@@ -9,6 +9,12 @@ from ShapeDetect import ShapeDetect
 
 
 def show_images(images, kill_later=True):
+    """This function show the images
+
+    Args:
+        images (np.ndarray): Image array
+        kill_later (bool, optional): To kill or not the window. Defaults to True.
+    """
     for index, image in enumerate(images):
         cv2.imshow('Kep', image)
     cv2.waitKey(0)
@@ -29,7 +35,7 @@ def find_contours(image) -> list:
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     thresh = cv2.Canny(blurred, 30, 30)
     #Finding contours
-    cnts = cv2.findContours(thresh.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     cnts = imutils.grab_contours(cnts)
     return cnts
 
@@ -101,8 +107,8 @@ if '__main__' == __name__:
     images = []
     for c in answer_boxes:
         cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
-        images.append(image)
-    show_images(images)
+        #images.append(image)
+        show_images([image])
 
     # # edge detection
     # image = cv2.imread(image_path)
