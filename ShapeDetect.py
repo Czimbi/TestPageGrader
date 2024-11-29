@@ -19,7 +19,7 @@ class ShapeDetect:
     
         peri = cv2.arcLength(contour, True)
         #Approximating number of vertecies
-        approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
+        approx = cv2.approxPolyDP(contour, 0.037 * peri, True)
         #Calculate size of rectengle
         if len(approx) == 4:
             return "Rectangle"

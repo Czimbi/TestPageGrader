@@ -1,5 +1,5 @@
-from imutils.perspective import four_point_transform
 from imutils import contours
+from imutils.perspective import four_point_transform
 import imutils
 import cv2
 import numpy as np
@@ -21,7 +21,7 @@ def show_images(images, kill_later=True):
     if kill_later:
         cv2.destroyAllWindows()
 
-def find_contours(image) -> list:
+def find_contours(image_orig) -> list:
     """Gets the contours of an image
 
     Args:
@@ -30,8 +30,13 @@ def find_contours(image) -> list:
     Returns:
         list: contour coordinates
     """
-    image = image.copy()
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    image = image_orig.copy()
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    #Remove blueis colors using HSV
+    mask = cv2.inRange(hsv, (90, 50, 100), (130, 255, 255))
+    result = cv2.inpaint(image, mask, 3, cv2.INPAINT_NS)
+
+    gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     thresh = cv2.Canny(blurred, 30, 30)
     #Finding contours
@@ -60,6 +65,32 @@ def get_rectangles(cnts) -> list:
 
     return possible_boxes
 
+def get_document_on_image(image):
+
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    edged = cv2.Canny(blurred, 50, 150)
+
+    cnts = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = imutils.grab_contours(cnts)
+    docCnt = None
+    
+    if len(cnts) > 0:
+      cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
+
+      for c in cnts:
+          peri = cv2.arcLength(c, closed=True)
+          approx = cv2.approxPolyDP(c, epsilon=peri*0.02, closed=True)
+
+          if len(approx) == 4:
+              docCnt = approx
+              break
+
+    contourImage = image.copy()
+    cv2.drawContours(contourImage, [docCnt], -1, (0, 0, 255), 2)
+
+    return contourImage
+
 def get_answer_boxes(contours):
     """Finds the answer boxes on the image.
 
@@ -79,14 +110,14 @@ def get_answer_boxes(contours):
     #Finding the largest contour boxes
     for c in contours:
         x, y, w, h = cv2.boundingRect(c)
-        if w * h >= max_area * 0.90:
+        if w * h >= max_area * 0.85:
             answer_boxes.append(c)
     return answer_boxes
 
 
 if '__main__' == __name__:
 
-    image_path ="images/as-1234-1.png"
+    image_path ="images/asdasd.png"
 
     ANSWER_KEY = {
         0: 1,
@@ -97,6 +128,9 @@ if '__main__' == __name__:
 
     # edge detection
     image = cv2.imread(image_path)
+
+    document_img = get_document_on_image(image)
+    show_images([document_img])
     #Finding the contour
     cnts = find_contours(image) 
     #Getting the answer boxes
@@ -109,45 +143,6 @@ if '__main__' == __name__:
         cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
         #images.append(image)
         show_images([image])
-
-    # # edge detection
-    # image = cv2.imread(image_path)
-    # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    # blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    # edged = cv2.Canny(blurred, 75, 200)
-    # show_images([edged])
-
-    # # find contours in edge detected image
-    # cnts = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    # cnts = imutils.grab_contours(cnts)
-    # docCnt = None
-
-    # allContourImage = image.copy()
-    # cv2.drawContours(allContourImage, cnts, -1, (0, 0, 255), 3)
-    # print("Total contours found after edge detection {}".format(len(cnts)))
-    # show_images([allContourImage])
-
-    # # finding the document contour
-    # if len(cnts) > 0:
-    #     cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
-
-    #     for c in cnts:
-    #         peri = cv2.arcLength(c, closed=True)
-    #         approx = cv2.approxPolyDP(c, epsilon=peri*0.02, closed=True)
-
-    #         if len(approx) == 4:
-    #             docCnt = approx
-    #             break
-
-    # contourImage = image.copy()
-    # cv2.drawContours(contourImage, [docCnt], -1, (0, 0, 255), 2)
-    # show_images([contourImage])
-
-    # # Getting the bird's eye view, top-view of the document
-    # paper = four_point_transform(image, docCnt.reshape(4, 2))
-    # warped = four_point_transform(gray, docCnt.reshape(4, 2))
-    # show_images([paper, warped])
-
 
     # # Thresholding the document
     # thresh = cv2.threshold(warped, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
